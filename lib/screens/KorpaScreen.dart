@@ -19,6 +19,8 @@ class KorpaScreen extends StatelessWidget {
     final Map<String, double> sumaPoMarketima = {};
     final Map<String, List<Map<String, dynamic>>> dostupni = {};
     final Map<String, List<Map<String, dynamic>>> nedostupni = {};
+    final List<Map<String, dynamic>> potpuniMarketInfo = [];
+    final List<Map<String, dynamic>> nepotpuniMarketInfo = [];
 
     for (final market in marketi) {
       double suma = 0;
@@ -42,12 +44,26 @@ class KorpaScreen extends StatelessWidget {
         }
       }
 
-      if (suma > 0) {
+      if (dostupniProizvodi.isNotEmpty) {
         sumaPoMarketima[market] = suma;
         dostupni[market] = dostupniProizvodi;
         nedostupni[market] = nedostupniProizvodi;
+
+        final info = {
+          'market': market,
+          'suma': suma,
+          'sviDostupni': nedostupniProizvodi.isEmpty
+        };
+
+        if (info['sviDostupni'] == true) {
+          potpuniMarketInfo.add(info);
+        } else {
+          nepotpuniMarketInfo.add(info);
+        }
       }
     }
+
+    potpuniMarketInfo.sort((a, b) => (a['suma'] as double).compareTo(b['suma'] as double));
 
     showDialog(
       context: context,
@@ -56,11 +72,14 @@ class KorpaScreen extends StatelessWidget {
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: sumaPoMarketima.entries.map((e) {
-              final market = e.key;
-              final total = e.value;
+            children: [
+              ...potpuniMarketInfo,
+              ...nepotpuniMarketInfo
+            ].map((info) {
+              final market = info['market'];
+              final total = info['suma'] as double;
+              final sviDostupni = info['sviDostupni'] as bool;
               final brojNedostupnih = nedostupni[market]?.length ?? 0;
-              final sviDostupni = brojNedostupnih == 0;
 
               return InkWell(
                 onTap: () {
@@ -74,12 +93,17 @@ class KorpaScreen extends StatelessWidget {
                           children: [
                             const Text('Dostupni proizvodi:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            ...dostupni[market]!.map((proizvod) => ListTile(
-                                  leading: proizvod['slika'] != null && proizvod['slika'].toString().startsWith('http')
-                                      ? Image.network(proizvod['slika'], width: 40, height: 40, fit: BoxFit.cover)
-                                      : const Icon(Icons.image_not_supported),
-                                  title: Text(proizvod['naziv'] ?? ''),
-                                )),
+                            ...dostupni[market]!.map((proizvod) {
+                              final cenaStr = proizvod[market]?.toString() ?? '-';
+                              final cena = double.tryParse(cenaStr.replaceAll(',', '.'));
+                              return ListTile(
+                                leading: proizvod['slika'] != null && proizvod['slika'].toString().startsWith('http')
+                                    ? Image.network(proizvod['slika'], width: 40, height: 40, fit: BoxFit.cover)
+                                    : const Icon(Icons.image_not_supported),
+                                title: Text(proizvod['naziv'] ?? ''),
+                                subtitle: cena != null ? Text('${cena.toStringAsFixed(2)} RSD') : null,
+                              );
+                            }),
                             const SizedBox(height: 16),
                             const Text('Nedostupni proizvodi:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
@@ -173,6 +197,31 @@ class KorpaScreen extends StatelessWidget {
                       final id = korpaMapa.keys.elementAt(index);
                       final proizvod = korpaMapa[id]!;
 
+                      final cene = [
+                        proizvod['univerexport'],
+                        proizvod['mega_maxi'],
+                        proizvod['lidl'],
+                        proizvod['maxi'],
+                        proizvod['probar'],
+                        proizvod['dis'],
+                        proizvod['idea'],
+                        proizvod['roda'],
+                        proizvod['ananas'],
+                      ]
+                          .where((c) => c != null && c != '-' && c.toString().trim().isNotEmpty)
+                          .map((c) => double.tryParse(c.toString().replaceAll(',', '.')))
+                          .whereType<double>()
+                          .toList();
+
+                      double minCena = 0;
+                      double maxCena = 0;
+
+                      if (cene.isNotEmpty) {
+                        cene.sort();
+                        minCena = cene.first;
+                        maxCena = cene.last;
+                      }
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
@@ -204,6 +253,13 @@ class KorpaScreen extends StatelessWidget {
                                   Text(
                                     proizvod['naziv'] ?? '',
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    cene.isNotEmpty
+                                        ? '${minCena.toStringAsFixed(2)} - ${maxCena.toStringAsFixed(2)} RSD'
+                                        : 'Nema cene',
+                                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(

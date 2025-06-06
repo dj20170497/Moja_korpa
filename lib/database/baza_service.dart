@@ -14,11 +14,11 @@ class BazaService {
 
   static Future<Database> _initDB() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'prodavnica.db');
+    final path = join(dbPath, 'prodavnica2.db');
 
     final file = File(path);
     if (!await file.exists()) {
-      ByteData data = await rootBundle.load('assets/database/prodavnica.db');
+      ByteData data = await rootBundle.load('assets/database/prodavnica2.db');
       List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       await file.writeAsBytes(bytes, flush: true);
     }

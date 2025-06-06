@@ -26,5 +26,5 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/images/juice.json
-    - assets/database/prodavnica.db
+    - assets/database/prodavnica2.db
     - assets/marketi_logo/
